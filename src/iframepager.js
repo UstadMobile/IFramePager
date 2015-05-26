@@ -170,8 +170,8 @@ IFramePager.prototype.updateFrames = function() {
                 this.frames[i].loadFrame();
             }
         }else {
-            if(this.frames[i].frames !== null) {
-                //this.frames[i].unloadFrame();
+            if(this.frames[i].frame !== null) {
+                this.frames[i].unloadFrame();
             }
         }
     }
@@ -335,8 +335,8 @@ IFramePagerPage.prototype.loadFrame = function() {
     var newFrame = document.createElement("iframe");
     
     newFrame.style.position = "absolute";
-    //newFrame.style.transform = "translate3d(" + this.pos[0] + "px,0,0)";
-    newFrame.style.webkitTransform = "translate3d("+ this.pos[0] + "px, 0, 0)";
+    var transformVal = "translate3d("+ this.pos[0] + "px, 0, 0)";
+    newFrame.style.webkitTransform = transformVal;
     newFrame.style.width = this.parent.width + "px";
     newFrame.style.height = this.parent.height + "px";
     newFrame.style.border = "none";
