@@ -52,6 +52,8 @@ var IFramePager = function(container, options) {
     
     this.touchStart = [-1, -1];
     
+    this.phase = "start";
+    
     this.activeTouchId = null;
     
     this.thresholdPassed = false;
@@ -65,7 +67,11 @@ var IFramePager = function(container, options) {
     this.container.style.overflow = "hidden";
     
     this.updateFrames();
+    
+    this.lastLoggedMove = false;
 };
+
+IFramePager.counter = 0;
 
 /**
  * Go to the next/previous page
@@ -196,7 +202,10 @@ IFramePager.prototype.handleFrameLoad = function(evt) {
     targetBody.addEventListener("touchstart", this.handleTouchStart.bind(this), 
         false);
     targetBody.addEventListener("touchmove", this.handleTouchMove.bind(this),
-        true);
+        false);
+    targetBody.addEventListener("mousemove", function() {
+        console.log("mousemove");
+    }, false);
     
     var touchEndHandler = this.handleTouchEnd.bind(this);
     targetBody.addEventListener("touchend", touchEndHandler, true);
@@ -214,11 +223,18 @@ IFramePager.prototype.handleFrameLoad = function(evt) {
  */
 IFramePager.prototype.handleTouchStart = function(evt) {
     //here we get the start using screen coordinates!  We handle one at a time!
-    if(this.touchStart[0] === -1) {
-        var changedTouch = evt.changedTouches[0];
-        this.touchStart = [changedTouch.screenX,
-           changedTouch.screenY];
-        this.activeTouchId = changedTouch.identifier;
+    IFramePager.counter++;
+    console.log("Touch starts: " + IFramePager.counter);
+    
+    
+    var touch = evt.touches[0];
+    
+    if(this.activeTouchId === null) {
+        this.touchStart = [touch.screenX,touch.screenY];
+        this.activeTouchId = touch.identifier;
+        console.log("Active touch id: " + this.activeTouchId);
+    }else {
+        console.log("touchstart: ABORT: is already in progress")
     }
 };
 
@@ -229,18 +245,30 @@ IFramePager.prototype.handleTouchStart = function(evt) {
  * @param {Event} evt
  */
 IFramePager.prototype.handleTouchMove = function(evt) {
+    console.log("Touch moves: " + IFramePager.counter);
     //if we have exceeded the threshold - now start moving things...
     var ti = 0;
+    var touch = null;
+    if(this.activeTouchId === null) {
+        this.touchStart = [touch.screenX,touch.screenY];
+        this.activeTouchId = evt.touches[0].identifier;
+        console.log("touchmove new touch: Active touch id: " + this.activeTouchId);
+    }
+    
+    
     var numTouches = evt.changedTouches.length;
     while(ti < numTouches && evt.changedTouches[ti].identifier !== this.activeTouchId ) {
         ti++;
     }
     
     if(ti >= numTouches) {
+        console.log("NOMATCH: touchmove: active touch not in list: " + IFramePager.counter);
         return;//the currently active touch is not in the list
     }
     
-    var distanceX = evt.changedTouches[ti].screenX - this.touchStart[0];
+    touch = evt.changedTouches[ti];
+    
+    var distanceX = touch.screenX - this.touchStart[0];
     if(this.thresholdPassed === false && Math.abs(distanceX) > this.threshold) {
         this.thresholdPassed = true;
     }
@@ -258,37 +286,43 @@ IFramePager.prototype.handleTouchMove = function(evt) {
 IFramePager.prototype.handleTouchEnd = function(evt) {
     var ti = 0;
     var numTouches = evt.changedTouches.length;
-    console.log("touch ends: " + evt.type);
+    console.log("touch ends: " + IFramePager.counter + " : "+ evt.type);
     
     while(ti < numTouches && evt.changedTouches[ti].identifier !== this.activeTouchId) {
         ti++;
     }
     
-    if(ti >= numTouches) {
-        console.log(" evt identifier does not match a changedtouches event");
+    if(ti >= numTouches && evt.touches.length > 1) {
+        console.log("NOMATCH: " + evt.type + " active touch not in list: multiple touches going on");
         return;//the currently active touch is not in the list
     }
     
+   
     //determine if this is a swipe - if yes move the rest of the way, 
-    if(this.thresholdPassed === true) {
+    var ondoneArgs =  {
+        ondone: function() {
+            this.touchStart = [-1,-1];
+            this.activeTouchId = null;
+        }
+    };
+    
+    if(this.thresholdPassed === true && this.activeTouchId !== null) {
         this.thresholdPassed = false;
-        this.activeTouchId = null;
         
         var distanceX = evt.changedTouches[0].screenX - this.touchStart[0];
         var pageInc = distanceX < 0 ? 1 : -1;
         
         
-        var ondoneArgs =  {
-            ondone: function() {
-                this.touchStart = [-1,-1];
-            }
-        };
+        
         var nextPage = this.currentItem + pageInc;
         if(nextPage >= 0 && nextPage < this.frames.length) {
             this.go(pageInc, ondoneArgs);
         }else {
             this.cancelMove(ondoneArgs);
         }
+    }else {
+        this.activeTouchId = null;
+        this.cancelMove(ondoneArgs);
     }
 };
 
@@ -335,8 +369,8 @@ IFramePagerPage.prototype.loadFrame = function() {
     var newFrame = document.createElement("iframe");
     
     newFrame.style.position = "absolute";
-    var transformVal = "translate3d("+ this.pos[0] + "px, 0, 0)";
-    newFrame.style.webkitTransform = transformVal;
+    //newFrame.style.transform = "translate3d(" + this.pos[0] + "px,0,0)";
+    newFrame.style.webkitTransform = "translate3d("+ this.pos[0] + "px, 0, 0)";
     newFrame.style.width = this.parent.width + "px";
     newFrame.style.height = this.parent.height + "px";
     newFrame.style.border = "none";
@@ -347,6 +381,9 @@ IFramePagerPage.prototype.loadFrame = function() {
     this.parent.container.appendChild(newFrame);
     newFrame.addEventListener("load", 
         this.parent.handleFrameLoad.bind(this.parent), false);
+    newFrame.ontouchmove = function(e) {
+        console.log('frame got direct touchmove');
+    }
     newFrame.setAttribute("src", this.url);
 };
 

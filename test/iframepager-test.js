@@ -26,7 +26,8 @@ function testSetup() {
         var testEl = document.getElementById("carouselcontainer");
         testIframePager = new IFramePager(testEl, {
             urls: ["assets/jqm-frame0.html", "assets/frame1.html",
-                "assets/frame2.html", "assets/frame3.html"]
+                "assets/frame2.html", "assets/frame3.html"],
+            threshold: 20
         });
         
         assert.ok(testIframePager.width > 0, 
