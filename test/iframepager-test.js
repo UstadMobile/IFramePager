@@ -30,6 +30,10 @@ function testSetup() {
             threshold: 20
         });
         
+        setTimeout(function() {
+            testIframePager.go(1);
+        }, 10000);
+        
         assert.ok(testIframePager.width > 0, 
             "Found width: " + testIframePager.width);
     });

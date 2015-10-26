@@ -11,6 +11,10 @@ and open the template in the editor.
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <body>
-        <a href="test/iframepager-test.html">Pager Qunit test</a>
+        <a id="alink" href="test/iframepager-test.html">Pager Qunit test</a>
+        
+        <script type="text/javascript">
+            alert(typeof document.getElementById("alink").style.webkitTransform);
+        </script>
     </body>
 </html>

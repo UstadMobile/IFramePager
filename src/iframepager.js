@@ -32,13 +32,28 @@ var IFramePager = function(container, options) {
     this.frames = [];//this is all the frames, those that we are not using are null
     this.urls = options.urls;
     
+    this.browserType = IFramePager.BROWSER_GENERIC;
+    
+    this.container = container;
+    
+    /**
+     * Sniff browser to determine which property to set
+     */
+    if(typeof this.container.style.webkitTransform !== "undefined") {
+        this.browserType = IFramePager.BROWSER_WEBKIT;
+    }else if(typeof this.container.style.MozTransform !== "undefined") {
+        this.browserType = IFramePager.BROWSER_MOZ;
+    }else if(typeof this.container.style.msTransform !== "undefined") {
+        this.browserType = IFramePager.BROWSER_IE;
+    }
+    
     for(var i = 0; i < options.urls.length; i++) {
         this.frames[i] = new IFramePagerPage(this, {
             url: this.urls[i]
         });
     }
     
-    this.container = container;
+    
     
     //container must be relative to actual clip the child elements
     this.container.style.position = "relative";
@@ -72,6 +87,14 @@ var IFramePager = function(container, options) {
 };
 
 IFramePager.counter = 0;
+
+IFramePager.BROWSER_GENERIC = -1;
+
+IFramePager.BROWSER_WEBKIT = 0;
+
+IFramePager.BROWSER_MOZ = 1;
+
+IFramePager.BROWSER_IE = 2;
 
 /**
  * Go to the next/previous page
@@ -249,12 +272,14 @@ IFramePager.prototype.handleTouchMove = function(evt) {
     //if we have exceeded the threshold - now start moving things...
     var ti = 0;
     var touch = null;
+    
+    /* Disabled - this code is wrong 
     if(this.activeTouchId === null) {
         this.touchStart = [touch.screenX,touch.screenY];
         this.activeTouchId = evt.touches[0].identifier;
         console.log("touchmove new touch: Active touch id: " + this.activeTouchId);
     }
-    
+    */
     
     var numTouches = evt.changedTouches.length;
     while(ti < numTouches && evt.changedTouches[ti].identifier !== this.activeTouchId ) {
@@ -369,8 +394,18 @@ IFramePagerPage.prototype.loadFrame = function() {
     var newFrame = document.createElement("iframe");
     
     newFrame.style.position = "absolute";
-    //newFrame.style.transform = "translate3d(" + this.pos[0] + "px,0,0)";
-    newFrame.style.webkitTransform = "translate3d("+ this.pos[0] + "px, 0, 0)";
+    
+    var transformStr = "translate3d("+ this.pos[0] + "px, 0, 0)";
+    if(this.parent.browserType === IFramePager.BROWSER_WEBKIT) {
+        newFrame.style.webkitTransform = transformStr;
+    }else if(this.parent.browserType === IFramePager.BROWSER_MOZ) {
+        newFrame.style.MozTransform = transformStr;
+    }else if(this.parent.browserType === IFramePager.BROWSER_IE) {
+        newFrame.style.msTransform = transformStr;
+    }else {
+        newFrame.style.transform = transformStr;
+    }
+    
     newFrame.style.width = this.parent.width + "px";
     newFrame.style.height = this.parent.height + "px";
     newFrame.style.border = "none";
@@ -391,9 +426,21 @@ IFramePagerPage.prototype.updatePosition = function(duration) {
     var posX = this.pos[0] + this.posOffset[0];
     var transformStr = "translate3d(" + Math.round(posX) + "px, 0, 0)";
     var durationStr = (duration / 1000).toFixed(1) + "s";
-    this.frame.style.webkitTransitionDuration = durationStr;
-    //this.frame.webkitTransform = "translate3d(" + Math.round(posX) + "px, 0, 0)";
-    this.frame.style.webkitTransform = transformStr;
+    
+    if(this.parent.browserType === IFramePager.BROWSER_WEBKIT) {
+        this.frame.style.webkitTransitionDuration = durationStr;
+        this.frame.style.webkitTransform = transformStr;
+    }else if(this.parent.browserType === IFramePager.BROWSER_MOZ) {
+        this.frame.style.MozTransitionDuration = durationStr;
+        this.frame.style.MozTransform = transformStr;
+    }else if(this.parent.browserType === IFramePager.BROWSER_IE) {
+        this.frame.style.msTransitionDuration = durationStr;
+        this.frame.style.msTransform = transformStr;
+    }else if(this.parent.browserType === IFramePager.BROWSER_GENERIC){
+        this.frame.style.transitionDuration = durationStr;
+        this.frame.style.transform = transformStr;
+    }
+
 };
 
 IFramePagerPage.prototype.setPos = function(pos) {
